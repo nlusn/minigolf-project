@@ -34,6 +34,7 @@ target_include_directories(glad PUBLIC external/glad/include)
 add_executable(minigolf
   src/main.cpp
   src/Shader.cpp
+  src/Mesh.cpp
 )
 target_include_directories(minigolf PRIVATE include src)
 target_link_libraries(minigolf PRIVATE glad glfw glm::glm OpenGL::GL)

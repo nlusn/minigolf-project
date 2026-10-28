@@ -1,6 +1,9 @@
 #include <glad/gl.h>
 #include <GLFW/glfw3.h>
+#include <glm/glm.hpp>
+#include <glm/gtc/matrix_transform.hpp>
 #include <iostream>
+#include "Mesh.h"
 #include "Shader.h"
 
 static void onResize(GLFWwindow*, int width, int height) {
@@ -44,37 +47,38 @@ int main() {
     Shader shader;
     shader.load("shaders/basic.vert", "shaders/basic.frag");
 
-    float vertices[] = {
-        -0.5f, -0.5f, 0.0f,   
-         0.5f, -0.5f, 0.0f,   
-         0.0f,  0.5f, 0.0f,   
-    };
+    Mesh cube = makeBox(1.0f, 1.0f, 1.0f);
 
-    unsigned int vao, vbo;
-    glGenVertexArrays(1, &vao);
-    glGenBuffers(1, &vbo);
-    glBindVertexArray(vao);
-    glBindBuffer(GL_ARRAY_BUFFER, vbo);
-    glBufferData(GL_ARRAY_BUFFER, sizeof(vertices), vertices, GL_STATIC_DRAW);
-    glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 3 * sizeof(float), (void*)0);
-    glEnableVertexAttribArray(0);
-    glBindVertexArray(0);
+    glEnable(GL_DEPTH_TEST);
+    glEnable(GL_CULL_FACE);
 
     while (!glfwWindowShouldClose(window)) {
         glClearColor(0.53f, 0.75f, 0.92f, 1.0f);
-        glClear(GL_COLOR_BUFFER_BIT);
+        glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
+
+        int width, height;
+        glfwGetFramebufferSize(window, &width, &height);
+        if (width == 0 || height == 0) {  // minimized
+            glfwPollEvents();
+            continue;
+        }
+        float time = (float)glfwGetTime();
+
+        glm::mat4 model = glm::rotate(glm::mat4(1.0f), time, glm::vec3(0.3f, 1.0f, 0.0f));
+        glm::mat4 view = glm::lookAt(glm::vec3(0.0f, 1.5f, 4.0f), glm::vec3(0.0f), glm::vec3(0.0f, 1.0f, 0.0f));
+        glm::mat4 projection = glm::perspective(glm::radians(50.0f), (float)width / height, 0.1f, 100.0f);
 
         shader.use();
-        shader.setVec3("uColor", glm::vec3(0.2f, 0.7f, 0.2f));  // grass green
-        glBindVertexArray(vao);
-        glDrawArrays(GL_TRIANGLES, 0, 3);
+        shader.setMat4("uModel", model);
+        shader.setMat4("uView", view);
+        shader.setMat4("uProjection", projection);
+        shader.setVec3("uColor", glm::vec3(0.2f, 0.7f, 0.2f));
+        cube.draw();
 
         glfwSwapBuffers(window);
         glfwPollEvents();
     }
 
-    glDeleteBuffers(1, &vbo);
-    glDeleteVertexArrays(1, &vao);
     glfwDestroyWindow(window);
     glfwTerminate();
     return 0;
