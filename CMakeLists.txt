@@ -7,7 +7,6 @@ if(NOT CMAKE_BUILD_TYPE)
   set(CMAKE_BUILD_TYPE Release)
 endif()
 
-# --- Dependencies: use the system packages if present, otherwise fetch them ---
 find_package(OpenGL REQUIRED)
 find_package(glfw3 3.3 QUIET)
 find_package(glm QUIET)
@@ -29,15 +28,21 @@ if(NOT glm_FOUND)
   FetchContent_MakeAvailable(glm)
 endif()
 
-# Add new .cpp files here as the project grows stage by stage.
+add_library(glad STATIC external/glad/src/gl.c)
+target_include_directories(glad PUBLIC external/glad/include)
+
 add_executable(minigolf
   src/main.cpp
-  src/gl.c        # GLAD loader (generated with glad2 for OpenGL 3.3 core)
+  src/Shader.cpp
 )
 target_include_directories(minigolf PRIVATE include src)
-target_link_libraries(minigolf PRIVATE glfw glm::glm OpenGL::GL)
+target_link_libraries(minigolf PRIVATE glad glfw glm::glm OpenGL::GL)
 if(MSVC)
-  target_compile_options(minigolf PRIVATE $<$<COMPILE_LANGUAGE:CXX>:/W3>)
+  target_compile_options(minigolf PRIVATE /W3)
 else()
-  target_compile_options(minigolf PRIVATE $<$<COMPILE_LANGUAGE:CXX>:-Wall -Wextra>)
+  target_compile_options(minigolf PRIVATE -Wall -Wextra)
 endif()
+
+add_custom_command(TARGET minigolf POST_BUILD
+  COMMAND ${CMAKE_COMMAND} -E copy_directory
+          ${CMAKE_SOURCE_DIR}/shaders $<TARGET_FILE_DIR:minigolf>/shaders)

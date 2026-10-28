@@ -1,0 +1,4 @@
+/home/kuhi/golf-development/build/CMakeFiles/glad.dir
+/home/kuhi/golf-development/build/CMakeFiles/minigolf.dir
+/home/kuhi/golf-development/build/CMakeFiles/edit_cache.dir
+/home/kuhi/golf-development/build/CMakeFiles/rebuild_cache.dir
