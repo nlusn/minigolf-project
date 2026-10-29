@@ -13,7 +13,3 @@ public:
 };
 
 Mesh makeBox(float width, float height, float depth, float tile = 1.0f);
-Mesh makeSphere(float radius, int slices, int stacks);
-Mesh makeCylinder(float bottomRadius, float topRadius, int slices);  // height 1, standing on y = 0
-Mesh makePlane(float width, float depth, float tile = 1.0f);
-Mesh makeDisc(float radius, int slices);

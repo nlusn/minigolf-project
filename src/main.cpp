@@ -5,8 +5,8 @@
 #include <iostream>
 #include <string>
 #include "Camera.h"
-#include "Course.h"
-#include "Scene.h"
+#include "Mesh.h"
+#include "Shader.h"
 
 static void onResize(GLFWwindow*, int width, int height) {
     glViewport(0, 0, width, height);
@@ -78,11 +78,14 @@ int main() {
     glfwGetFramebufferSize(window, &w, &h);
     glViewport(0, 0, w, h);
 
-    Scene scene;
-    scene.init();
+    Shader shader;
+    shader.load("shaders/basic.vert", "shaders/basic.frag");
 
-    glm::vec3 ballPosition(TEE_POSITION.x, BALL_RADIUS, TEE_POSITION.y);
-    camera.target = ballPosition;
+    Mesh cube = makeBox(1.0f, 1.0f, 1.0f);
+    Mesh floor = makeBox(6.0f, 0.1f, 6.0f);
+
+    glEnable(GL_DEPTH_TEST);
+    glEnable(GL_CULL_FACE);
 
     float lastTime = (float)glfwGetTime();
     float fpsTimer = 0.0f;
@@ -115,7 +118,20 @@ int main() {
             continue;
         }
 
-        scene.draw(camera, (float)width / height, ballPosition);
+        shader.use();
+        shader.setMat4("uView", camera.getViewMatrix());
+        shader.setMat4("uProjection", camera.getProjectionMatrix((float)width / height));
+
+        glm::mat4 floorModel = glm::translate(glm::mat4(1.0f), glm::vec3(0.0f, -0.05f, 0.0f));
+        shader.setMat4("uModel", floorModel);
+        shader.setVec3("uColor", glm::vec3(0.2f, 0.7f, 0.2f));
+        floor.draw();
+
+        glm::mat4 cubeModel = glm::translate(glm::mat4(1.0f), glm::vec3(0.0f, 0.5f, 0.0f));
+        cubeModel = glm::rotate(cubeModel, now, glm::vec3(0.0f, 1.0f, 0.0f));
+        shader.setMat4("uModel", cubeModel);
+        shader.setVec3("uColor", glm::vec3(0.9f, 0.9f, 0.9f));
+        cube.draw();
 
         glfwSwapBuffers(window);
         glfwPollEvents();
