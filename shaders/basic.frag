@@ -1,10 +1,13 @@
 #version 330 core
 in vec3 fragPosition;
 in vec3 fragNormal;
+in vec2 fragTexCoord;
 
 out vec4 outColor;
 
 uniform vec3 uColor;
+uniform bool uUseTexture;
+uniform sampler2D uTexture;
 uniform bool uGlow;
 
 uniform vec3 uViewPosition;
@@ -34,6 +37,8 @@ vec3 pointLight(vec3 N, vec3 V, vec3 lightPosition, vec3 lightColor, vec3 baseCo
 
 void main() {
     vec3 baseColor = uColor;
+    if (uUseTexture)
+        baseColor = baseColor * texture(uTexture, fragTexCoord).rgb;
     if (uGlow) {
         outColor = vec4(baseColor, 1.0);
         return;

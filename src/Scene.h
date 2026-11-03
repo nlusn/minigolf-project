@@ -17,7 +17,7 @@ public:
 
 private:
     // glow = no lighting, used for light bulbs
-    void drawObject(const Mesh& mesh, const glm::mat4& model, glm::vec3 color, bool glow = false);
+    void drawObject(const Mesh& mesh, const glm::mat4& model, glm::vec3 color, unsigned int texture = 0, bool glow = false);
     void drawCourse();
     void drawLamps(const SceneState& state);
     void drawBall(glm::vec3 position);
@@ -26,4 +26,5 @@ private:
     Mesh cube, sphere, cylinder, cone, disc;
     Mesh grassPlane, groundPlane;
     Mesh longWall, shortWall;
+    unsigned int grassTexture = 0, woodTexture = 0;
 };

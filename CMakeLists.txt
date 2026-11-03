@@ -37,6 +37,7 @@ add_executable(minigolf
   src/Mesh.cpp
   src/Camera.cpp
   src/Scene.cpp
+  src/Texture.cpp
 )
 target_include_directories(minigolf PRIVATE include src)
 target_link_libraries(minigolf PRIVATE glad glfw glm::glm OpenGL::GL)
