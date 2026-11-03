@@ -5,6 +5,8 @@
 #include <cmath>
 #include <iostream>
 #include <string>
+#include <vector>
+#include "Ball.h"
 #include "Camera.h"
 #include "Course.h"
 #include "Scene.h"
@@ -14,6 +16,10 @@ static void onResize(GLFWwindow*, int width, int height) {
 }
 
 Camera camera;
+Ball ball;
+std::vector<Wall> walls;
+const float PHYSICS_STEP = 1.0f / 240.0f;
+
 bool lampOn = true;
 bool night = false;
 bool rightMouseDown = false;
@@ -24,6 +30,9 @@ static void onKey(GLFWwindow* window, int key, int, int action, int) {
     if (key == GLFW_KEY_ESCAPE) glfwSetWindowShouldClose(window, 1);
     if (key == GLFW_KEY_L) lampOn = !lampOn;
     if (key == GLFW_KEY_N) night = !night;
+    // test: push the ball forward (replaced by aiming in the next stage)
+    if (key == GLFW_KEY_SPACE && !ball.isMoving()) ball.velocity = glm::vec3(0.3f, 0.0f, -6.0f);
+    if (key == GLFW_KEY_R) ball.reset(TEE_POSITION);
 }
 
 static void onMouseButton(GLFWwindow*, int button, int action, int) {
@@ -39,6 +48,16 @@ static void onCursor(GLFWwindow*, double x, double y) {
 
 static void onScroll(GLFWwindow*, double, double yOffset) {
     camera.zoom(-(float)yOffset * 0.5f);
+}
+
+// physics runs in small fixed steps so it behaves the same at any fps
+static void updatePhysics(float dt) {
+    static float timeLeft = 0.0f;
+    timeLeft += dt;
+    while (timeLeft >= PHYSICS_STEP) {
+        timeLeft -= PHYSICS_STEP;
+        ball.update(PHYSICS_STEP, walls);
+    }
 }
 
 // held keys, multiplied by dt so speed doesn't depend on fps
@@ -87,8 +106,12 @@ int main() {
     Scene scene;
     scene.init();
 
-    glm::vec3 ballPosition(TEE_POSITION.x, BALL_RADIUS, TEE_POSITION.y);
-    camera.target = ballPosition;
+    float t = WALL_THICKNESS;
+    walls.push_back({COURSE_MIN_X - t, COURSE_MIN_Z, COURSE_MIN_X, COURSE_MAX_Z});          // left
+    walls.push_back({COURSE_MAX_X, COURSE_MIN_Z, COURSE_MAX_X + t, COURSE_MAX_Z});          // right
+    walls.push_back({COURSE_MIN_X - t, COURSE_MIN_Z - t, COURSE_MAX_X + t, COURSE_MIN_Z});  // far
+    walls.push_back({COURSE_MIN_X - t, COURSE_MAX_Z, COURSE_MAX_X + t, COURSE_MAX_Z + t});  // near
+    ball.reset(TEE_POSITION);
 
     float lastTime = (float)glfwGetTime();
     float fpsTimer = 0.0f;
@@ -109,7 +132,10 @@ int main() {
             fpsTimer = 0.0f;
         }
 
+        if (dt > 0.1f) dt = 0.1f;  // e.g. when the window is dragged
         processInput(window, dt);
+        updatePhysics(dt);
+        camera.target = glm::vec3(ball.position.x, 0.1f, ball.position.z);
 
         if (night) glClearColor(0.02f, 0.03f, 0.1f, 1.0f);
         else glClearColor(0.53f, 0.75f, 0.92f, 1.0f);
@@ -126,7 +152,7 @@ int main() {
         state.lampOn = lampOn;
         state.night = night;
         state.lanternPosition = glm::vec3(2.6f * cos(now * 0.6f), 1.2f, -3.0f + 2.6f * sin(now * 0.6f));
-        scene.draw(camera, (float)width / height, ballPosition, state);
+        scene.draw(camera, (float)width / height, ball.position, state);
 
         glfwSwapBuffers(window);
         glfwPollEvents();
