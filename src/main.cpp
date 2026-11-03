@@ -15,24 +15,58 @@ static void onResize(GLFWwindow*, int width, int height) {
     glViewport(0, 0, width, height);
 }
 
+enum GameState { AIMING, ROLLING };
+
 Camera camera;
 Ball ball;
 std::vector<Wall> walls;
 const float PHYSICS_STEP = 1.0f / 240.0f;
+const float MAX_SHOT_SPEED = 9.0f;
+
+GameState gameState = AIMING;
+int strokes = 0;
+float aimAngle = 0.0f;        // 0 = towards -z (towards the cup)
+float power = 0.0f;           // 0..1
+bool charging = false;        // space is held
+float powerDirection = 1.0f;  // power bar goes up and down
 
 bool lampOn = true;
 bool night = false;
 bool rightMouseDown = false;
 double lastMouseX = 0, lastMouseY = 0;
 
+static void resetBall() {
+    ball.reset(TEE_POSITION);
+    strokes = 0;
+    aimAngle = 0.0f;
+    power = 0.0f;
+    charging = false;
+    gameState = AIMING;
+    camera.yaw = aimAngle;
+}
+
+static void shoot() {
+    charging = false;
+    if (gameState != AIMING || power < 0.02f) return;
+    // aim angle rotates the direction (0, 0, -1) around y
+    glm::vec3 direction(-sin(aimAngle), 0.0f, -cos(aimAngle));
+    ball.velocity = direction * (0.5f + power * (MAX_SHOT_SPEED - 0.5f));
+    strokes++;
+    gameState = ROLLING;
+}
+
 static void onKey(GLFWwindow* window, int key, int, int action, int) {
+    if (key == GLFW_KEY_SPACE && action == GLFW_RELEASE && charging) shoot();
     if (action != GLFW_PRESS) return;
     if (key == GLFW_KEY_ESCAPE) glfwSetWindowShouldClose(window, 1);
     if (key == GLFW_KEY_L) lampOn = !lampOn;
     if (key == GLFW_KEY_N) night = !night;
-    // test: push the ball forward (replaced by aiming in the next stage)
-    if (key == GLFW_KEY_SPACE && !ball.isMoving()) ball.velocity = glm::vec3(0.3f, 0.0f, -6.0f);
-    if (key == GLFW_KEY_R) ball.reset(TEE_POSITION);
+    if (key == GLFW_KEY_SPACE && gameState == AIMING) {
+        charging = true;
+        power = 0.0f;
+        powerDirection = 1.0f;
+    }
+    if (key == GLFW_KEY_R) resetBall();
 }
 
 static void onMouseButton(GLFWwindow*, int button, int action, int) {
@@ -57,17 +91,36 @@ static void updatePhysics(float dt) {
     while (timeLeft >= PHYSICS_STEP) {
         timeLeft -= PHYSICS_STEP;
         ball.update(PHYSICS_STEP, walls);
+        if (gameState == ROLLING && !ball.isMoving()) gameState = AIMING;
     }
 }
 
 // held keys, multiplied by dt so speed doesn't depend on fps
 static void processInput(GLFWwindow* window, float dt) {
+    if (gameState == AIMING) {
+        float turnSpeed = 1.2f;
+        if (glfwGetKey(window, GLFW_KEY_LEFT_SHIFT) == GLFW_PRESS) turnSpeed = 0.25f;  // fine aim
+        if (glfwGetKey(window, GLFW_KEY_LEFT) == GLFW_PRESS) {
+            aimAngle += turnSpeed * dt;
+            camera.yaw = aimAngle;
+        }
+        if (glfwGetKey(window, GLFW_KEY_RIGHT) == GLFW_PRESS) {
+            aimAngle -= turnSpeed * dt;
+            camera.yaw = aimAngle;
+        }
+    }
     if (glfwGetKey(window, GLFW_KEY_A) == GLFW_PRESS) camera.rotate(1.5f * dt, 0);
     if (glfwGetKey(window, GLFW_KEY_D) == GLFW_PRESS) camera.rotate(-1.5f * dt, 0);
     if (glfwGetKey(window, GLFW_KEY_UP) == GLFW_PRESS) camera.rotate(0, 0.8f * dt);
     if (glfwGetKey(window, GLFW_KEY_DOWN) == GLFW_PRESS) camera.rotate(0, -0.8f * dt);
     if (glfwGetKey(window, GLFW_KEY_W) == GLFW_PRESS) camera.zoom(-4.0f * dt);
     if (glfwGetKey(window, GLFW_KEY_S) == GLFW_PRESS) camera.zoom(4.0f * dt);
+
+    if (charging) {
+        power += powerDirection * dt / 1.2f;
+        if (power > 1.0f) { power = 1.0f; powerDirection = -1.0f; }
+        if (power < 0.0f) { power = 0.0f; powerDirection = 1.0f; }
+    }
 }
 
 int main() {
@@ -111,7 +164,7 @@ int main() {
     walls.push_back({COURSE_MAX_X, COURSE_MIN_Z, COURSE_MAX_X + t, COURSE_MAX_Z});          // right
     walls.push_back({COURSE_MIN_X - t, COURSE_MIN_Z - t, COURSE_MAX_X + t, COURSE_MIN_Z});  // far
     walls.push_back({COURSE_MIN_X - t, COURSE_MAX_Z, COURSE_MAX_X + t, COURSE_MAX_Z + t});  // near
-    ball.reset(TEE_POSITION);
+    resetBall();
 
     float lastTime = (float)glfwGetTime();
     float fpsTimer = 0.0f;
@@ -126,7 +179,7 @@ int main() {
         fpsTimer += dt;
         if (fpsTimer >= 0.5f) {
             int fps = (int)(frames / fpsTimer);
-            std::string title = "Mini Golf - FPS " + std::to_string(fps);
+            std::string title = "Mini Golf - FPS " + std::to_string(fps) + " - Strokes " + std::to_string(strokes);
             glfwSetWindowTitle(window, title.c_str());
             frames = 0;
             fpsTimer = 0.0f;
@@ -152,6 +205,9 @@ int main() {
         state.lampOn = lampOn;
         state.night = night;
         state.lanternPosition = glm::vec3(2.6f * cos(now * 0.6f), 1.2f, -3.0f + 2.6f * sin(now * 0.6f));
+        state.showAim = (gameState == AIMING);
+        state.aimAngle = aimAngle;
+        state.power = power;
         scene.draw(camera, (float)width / height, ball.position, state);
 
         glfwSwapBuffers(window);

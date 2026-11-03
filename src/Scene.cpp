@@ -72,6 +72,7 @@ void Scene::draw(const Camera& camera, float aspect, vec3 ballPosition, const Sc
     drawCourse();
     drawLamps(state);
     drawBall(ballPosition);
+    if (state.showAim) drawAimLine(ballPosition, state);
 }
 
 void Scene::drawCourse() {
@@ -109,4 +110,14 @@ void Scene::drawLamps(const SceneState& state) {
 void Scene::drawBall(vec3 position) {
     mat4 model = glm::translate(mat4(1.0f), position);
     drawObject(sphere, glm::scale(model, vec3(BALL_RADIUS)), vec3(1.0f));
+}
+
+void Scene::drawAimLine(vec3 ballPosition, const SceneState& state) {
+    // thin line on the ground, longer and redder with more power
+    float length = 0.5f + state.power * 2.5f;
+    vec3 color = glm::mix(vec3(1.0f, 1.0f, 0.3f), vec3(1.0f, 0.1f, 0.1f), state.power);
+    mat4 model = glm::translate(mat4(1.0f), vec3(ballPosition.x, 0.01f, ballPosition.z));
+    model = glm::rotate(model, state.aimAngle, vec3(0, 1, 0));
+    model = glm::translate(model, vec3(0, 0, -(BALL_RADIUS + length / 2)));
+    drawObject(cube, glm::scale(model, vec3(0.03f, 0.005f, length)), color, 0, true);
 }

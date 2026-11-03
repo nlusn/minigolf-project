@@ -8,6 +8,9 @@ struct SceneState {
     bool lampOn = true;
     bool night = false;
     glm::vec3 lanternPosition = glm::vec3(0.0f);
+    bool showAim = false;
+    float aimAngle = 0.0f;
+    float power = 0.0f;   // 0..1
 };
 
 class Scene {
@@ -21,6 +24,7 @@ private:
     void drawCourse();
     void drawLamps(const SceneState& state);
     void drawBall(glm::vec3 position);
+    void drawAimLine(glm::vec3 ballPosition, const SceneState& state);
 
     Shader shader;
     Mesh cube, sphere, cylinder, cone, disc;
