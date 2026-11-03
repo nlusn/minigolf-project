@@ -2,6 +2,7 @@
 #include <GLFW/glfw3.h>
 #include <glm/glm.hpp>
 #include <glm/gtc/matrix_transform.hpp>
+#include <cmath>
 #include <iostream>
 #include <string>
 #include "Camera.h"
@@ -13,11 +14,16 @@ static void onResize(GLFWwindow*, int width, int height) {
 }
 
 Camera camera;
+bool lampOn = true;
+bool night = false;
 bool rightMouseDown = false;
 double lastMouseX = 0, lastMouseY = 0;
 
 static void onKey(GLFWwindow* window, int key, int, int action, int) {
-    if (key == GLFW_KEY_ESCAPE && action == GLFW_PRESS) glfwSetWindowShouldClose(window, 1);
+    if (action != GLFW_PRESS) return;
+    if (key == GLFW_KEY_ESCAPE) glfwSetWindowShouldClose(window, 1);
+    if (key == GLFW_KEY_L) lampOn = !lampOn;
+    if (key == GLFW_KEY_N) night = !night;
 }
 
 static void onMouseButton(GLFWwindow*, int button, int action, int) {
@@ -105,7 +111,8 @@ int main() {
 
         processInput(window, dt);
 
-        glClearColor(0.53f, 0.75f, 0.92f, 1.0f);
+        if (night) glClearColor(0.02f, 0.03f, 0.1f, 1.0f);
+        else glClearColor(0.53f, 0.75f, 0.92f, 1.0f);
         glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 
         int width, height;
@@ -115,7 +122,11 @@ int main() {
             continue;
         }
 
-        scene.draw(camera, (float)width / height, ballPosition);
+        SceneState state;
+        state.lampOn = lampOn;
+        state.night = night;
+        state.lanternPosition = glm::vec3(2.6f * cos(now * 0.6f), 1.2f, -3.0f + 2.6f * sin(now * 0.6f));
+        scene.draw(camera, (float)width / height, ballPosition, state);
 
         glfwSwapBuffers(window);
         glfwPollEvents();

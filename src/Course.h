@@ -13,6 +13,8 @@ const float CUP_RADIUS = 0.17f;
 const float BALL_RADIUS = 0.1f;
 const int PAR = 2;
 
+const glm::vec3 LAMP_POSITION(2.3f, 0.0f, -7.5f);
+
 struct Wall {
     float minX, minZ, maxX, maxZ;
 };

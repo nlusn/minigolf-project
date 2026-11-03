@@ -4,14 +4,22 @@
 #include "Shader.h"
 #include <glm/glm.hpp>
 
+struct SceneState {
+    bool lampOn = true;
+    bool night = false;
+    glm::vec3 lanternPosition = glm::vec3(0.0f);
+};
+
 class Scene {
 public:
     void init();
-    void draw(const Camera& camera, float aspect, glm::vec3 ballPosition);
+    void draw(const Camera& camera, float aspect, glm::vec3 ballPosition, const SceneState& state);
 
 private:
-    void drawObject(const Mesh& mesh, const glm::mat4& model, glm::vec3 color);
+    // glow = no lighting, used for light bulbs
+    void drawObject(const Mesh& mesh, const glm::mat4& model, glm::vec3 color, bool glow = false);
     void drawCourse();
+    void drawLamps(const SceneState& state);
     void drawBall(glm::vec3 position);
 
     Shader shader;
