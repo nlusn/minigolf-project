@@ -15,7 +15,7 @@ static void onResize(GLFWwindow*, int width, int height) {
     glViewport(0, 0, width, height);
 }
 
-enum GameState { AIMING, ROLLING };
+enum GameState { AIMING, ROLLING, IN_HOLE };
 
 Camera camera;
 Ball ball;
@@ -30,10 +30,28 @@ float power = 0.0f;           // 0..1
 bool charging = false;        // space is held
 float powerDirection = 1.0f;  // power bar goes up and down
 
+std::string message;          // shown in the title for now, on screen later
+float messageTimer = 0.0f;
+
 bool lampOn = true;
 bool night = false;
 bool rightMouseDown = false;
 double lastMouseX = 0, lastMouseY = 0;
+
+static void showMessage(const std::string& text, float seconds) {
+    message = text;
+    messageTimer = seconds;
+    std::cout << text << std::endl;
+}
+
+static std::string getResultName() {
+    if (strokes == 1) return "HOLE IN ONE!";
+    int difference = strokes - PAR;
+    if (difference == -1) return "BIRDIE!";
+    if (difference == 0) return "PAR";
+    if (difference == 1) return "BOGEY";
+    return "+" + std::to_string(difference) + " OVER PAR";
+}
 
 static void resetBall() {
     ball.reset(TEE_POSITION);
@@ -90,8 +108,20 @@ static void updatePhysics(float dt) {
     timeLeft += dt;
     while (timeLeft >= PHYSICS_STEP) {
         timeLeft -= PHYSICS_STEP;
+        if (gameState == IN_HOLE) continue;
         ball.update(PHYSICS_STEP, walls);
-        if (gameState == ROLLING && !ball.isMoving()) gameState = AIMING;
+        if (gameState != ROLLING) continue;
+
+        // in the hole: close to the cup centre and not too fast
+        glm::vec2 toCup = CUP_POSITION - glm::vec2(ball.position.x, ball.position.z);
+        if (glm::length(toCup) < CUP_RADIUS && glm::length(ball.velocity) < 2.5f) {
+            ball.velocity = glm::vec3(0.0f);
+            ball.position = glm::vec3(CUP_POSITION.x, -0.1f, CUP_POSITION.y);  // drop into the cup
+            showMessage(getResultName() + " - PRESS R TO PLAY AGAIN", 100.0f);
+            gameState = IN_HOLE;
+        } else if (!ball.isMoving()) {
+            gameState = AIMING;
+        }
     }
 }
 
@@ -180,6 +210,7 @@ int main() {
         if (fpsTimer >= 0.5f) {
             int fps = (int)(frames / fpsTimer);
             std::string title = "Mini Golf - FPS " + std::to_string(fps) + " - Strokes " + std::to_string(strokes);
+            if (messageTimer > 0.0f) title += " - " + message;
             glfwSetWindowTitle(window, title.c_str());
             frames = 0;
             fpsTimer = 0.0f;
@@ -188,6 +219,7 @@ int main() {
         if (dt > 0.1f) dt = 0.1f;  // e.g. when the window is dragged
         processInput(window, dt);
         updatePhysics(dt);
+        if (messageTimer > 0.0f) messageTimer -= dt;
         camera.target = glm::vec3(ball.position.x, 0.1f, ball.position.z);
 
         if (night) glClearColor(0.02f, 0.03f, 0.1f, 1.0f);
@@ -208,6 +240,7 @@ int main() {
         state.showAim = (gameState == AIMING);
         state.aimAngle = aimAngle;
         state.power = power;
+        state.time = now;
         scene.draw(camera, (float)width / height, ball.position, state);
 
         glfwSwapBuffers(window);

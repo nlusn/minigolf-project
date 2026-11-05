@@ -11,6 +11,7 @@ struct SceneState {
     bool showAim = false;
     float aimAngle = 0.0f;
     float power = 0.0f;   // 0..1
+    float time = 0.0f;
 };
 
 class Scene {
@@ -23,6 +24,7 @@ private:
     void drawObject(const Mesh& mesh, const glm::mat4& model, glm::vec3 color, unsigned int texture = 0, bool glow = false);
     void drawCourse();
     void drawLamps(const SceneState& state);
+    void drawFlag(const SceneState& state);
     void drawBall(glm::vec3 position);
     void drawAimLine(glm::vec3 ballPosition, const SceneState& state);
 

@@ -2,6 +2,7 @@
 #include "Course.h"
 #include "Texture.h"
 #include <glm/gtc/matrix_transform.hpp>
+#include <cmath>
 
 using glm::mat4;
 using glm::vec3;
@@ -70,6 +71,7 @@ void Scene::draw(const Camera& camera, float aspect, vec3 ballPosition, const Sc
     shader.setVec3("uLanternColor", vec3(0.4f, 0.7f, 1.0f) * lampStrength);
 
     drawCourse();
+    drawFlag(state);
     drawLamps(state);
     drawBall(ballPosition);
     if (state.showAim) drawAimLine(ballPosition, state);
@@ -92,6 +94,17 @@ void Scene::drawCourse() {
     // cup is a dark disc just above the grass
     mat4 cup = glm::translate(mat4(1.0f), vec3(CUP_POSITION.x, 0.002f, CUP_POSITION.y));
     drawObject(disc, glm::scale(cup, vec3(CUP_RADIUS, 1, CUP_RADIUS)), vec3(0.03f));
+}
+
+void Scene::drawFlag(const SceneState& state) {
+    // the flag is a child of the pole: its matrix starts from the pole's matrix
+    mat4 poleMatrix = glm::translate(mat4(1.0f), vec3(CUP_POSITION.x, 0, CUP_POSITION.y));
+    drawObject(cylinder, glm::scale(poleMatrix, vec3(0.015f, 1.3f, 0.015f)), vec3(0.95f));
+
+    mat4 flagMatrix = glm::translate(poleMatrix, vec3(0, 1.18f, 0));
+    flagMatrix = glm::rotate(flagMatrix, 0.25f * sinf(state.time * 2.0f), vec3(0, 1, 0));  // waving
+    mat4 flag = glm::translate(flagMatrix, vec3(0.2f, 0, 0));
+    drawObject(cube, glm::scale(flag, vec3(0.4f, 0.24f, 0.01f)), vec3(0.9f, 0.1f, 0.1f));
 }
 
 void Scene::drawLamps(const SceneState& state) {
