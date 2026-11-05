@@ -59,3 +59,21 @@ unsigned int makeWoodTexture() {
     }
     return uploadTexture(pixels);
 }
+
+unsigned int makeBrickTexture() {
+    std::vector<unsigned char> pixels(SIZE * SIZE * 3);
+    const int brickW = 32, brickH = 16;
+    for (int y = 0; y < SIZE; y++) {
+        for (int x = 0; x < SIZE; x++) {
+            int row = y / brickH;
+            int shiftedX = x + ((row % 2 == 1) ? brickW / 2 : 0);  // every second row shifted
+            bool mortar = (y % brickH < 2) || (shiftedX % brickW < 2);
+            float noise = 0.9f + 0.2f * random01();
+            if (mortar)
+                setPixel(pixels, x, y, 0.75f * noise, 0.72f * noise, 0.66f * noise);
+            else
+                setPixel(pixels, x, y, 0.65f * noise, 0.32f * noise, 0.24f * noise);
+        }
+    }
+    return uploadTexture(pixels);
+}

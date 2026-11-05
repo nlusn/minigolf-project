@@ -27,6 +27,10 @@ void Scene::init() {
 
     grassTexture = makeGrassTexture();
     woodTexture = makeWoodTexture();
+    brickTexture = makeBrickTexture();
+
+    baseSide = makeBox(BASE_HALF_WIDTH - TUNNEL_HALF_WIDTH, BASE_HEIGHT, 2 * BASE_HALF_DEPTH, 0.5f);
+    baseTop = makeBox(2 * TUNNEL_HALF_WIDTH, BASE_HEIGHT - TUNNEL_HEIGHT, 2 * BASE_HALF_DEPTH, 0.5f);
 
     glEnable(GL_DEPTH_TEST);
     glEnable(GL_CULL_FACE);
@@ -46,7 +50,7 @@ void Scene::drawObject(const Mesh& mesh, const mat4& model, vec3 color, unsigned
     mesh.draw();
 }
 
-void Scene::draw(const Camera& camera, float aspect, vec3 ballPosition, const SceneState& state) {
+void Scene::draw(const Camera& camera, float aspect, vec3 ballPosition, const Windmill& windmill, const SceneState& state) {
     shader.use();
     shader.setMat4("uView", camera.getViewMatrix());
     shader.setMat4("uProjection", camera.getProjectionMatrix(aspect));
@@ -71,6 +75,7 @@ void Scene::draw(const Camera& camera, float aspect, vec3 ballPosition, const Sc
     shader.setVec3("uLanternColor", vec3(0.4f, 0.7f, 1.0f) * lampStrength);
 
     drawCourse();
+    drawWindmill(windmill);
     drawFlag(state);
     drawLamps(state);
     drawBall(ballPosition);
@@ -94,6 +99,41 @@ void Scene::drawCourse() {
     // cup is a dark disc just above the grass
     mat4 cup = glm::translate(mat4(1.0f), vec3(CUP_POSITION.x, 0.002f, CUP_POSITION.y));
     drawObject(disc, glm::scale(cup, vec3(CUP_RADIUS, 1, CUP_RADIUS)), vec3(0.03f));
+}
+
+// hierarchy: windmill -> base, tower -> roof
+//            windmill -> rotor (spins) -> hub, blade 0..3 -> spar, sail
+void Scene::drawWindmill(const Windmill& windmill) {
+    mat4 windmillMatrix = glm::translate(mat4(1.0f), windmill.position);
+
+    float sideX = (TUNNEL_HALF_WIDTH + BASE_HALF_WIDTH) / 2;
+    drawObject(baseSide, glm::translate(windmillMatrix, vec3(-sideX, BASE_HEIGHT / 2, 0)), vec3(1.0f), brickTexture);
+    drawObject(baseSide, glm::translate(windmillMatrix, vec3(sideX, BASE_HEIGHT / 2, 0)), vec3(1.0f), brickTexture);
+    drawObject(baseTop, glm::translate(windmillMatrix, vec3(0, (BASE_HEIGHT + TUNNEL_HEIGHT) / 2, 0)), vec3(1.0f), brickTexture);
+    mat4 tunnelFloor = glm::translate(windmillMatrix, vec3(0, 0.003f, 0));
+    drawObject(cube, glm::scale(tunnelFloor, vec3(2 * TUNNEL_HALF_WIDTH, 0.004f, 2 * BASE_HALF_DEPTH)), vec3(0.15f, 0.12f, 0.1f));
+
+    mat4 towerMatrix = glm::translate(windmillMatrix, vec3(0, BASE_HEIGHT, 0));
+    drawObject(cylinder, glm::scale(towerMatrix, vec3(0.7f, 1.5f, 0.7f)), vec3(1.0f, 0.95f, 0.9f), brickTexture);
+    mat4 roofMatrix = glm::translate(towerMatrix, vec3(0, 1.5f, 0));
+    drawObject(cone, glm::scale(roofMatrix, vec3(0.85f, 0.75f, 0.85f)), vec3(0.65f, 0.18f, 0.12f));
+
+    mat4 rotorMatrix = glm::translate(windmillMatrix, vec3(0, HUB_HEIGHT, HUB_FRONT));
+    rotorMatrix = glm::rotate(rotorMatrix, windmill.angle, vec3(0, 0, 1));
+
+    mat4 hubMatrix = glm::translate(rotorMatrix, vec3(0, 0, -0.35f));
+    hubMatrix = glm::rotate(hubMatrix, glm::radians(90.0f), vec3(1, 0, 0));
+    drawObject(cylinder, glm::scale(hubMatrix, vec3(0.14f, 0.42f, 0.14f)), vec3(0.3f, 0.2f, 0.12f));
+
+    float sailStart = 0.42f;
+    float sailLength = BLADE_LENGTH - sailStart;
+    for (int i = 0; i < 4; i++) {
+        mat4 bladeMatrix = glm::rotate(rotorMatrix, glm::radians(90.0f * i), vec3(0, 0, 1));
+        mat4 spar = glm::translate(bladeMatrix, vec3(0, BLADE_LENGTH / 2, 0));
+        drawObject(cube, glm::scale(spar, vec3(0.07f, BLADE_LENGTH, 0.06f)), vec3(1.0f), woodTexture);
+        mat4 sail = glm::translate(bladeMatrix, vec3(0, sailStart + sailLength / 2, 0));
+        drawObject(cube, glm::scale(sail, vec3(2 * BLADE_HALF_WIDTH, sailLength, 0.03f)), vec3(0.92f, 0.88f, 0.78f));
+    }
 }
 
 void Scene::drawFlag(const SceneState& state) {

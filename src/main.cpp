@@ -10,6 +10,7 @@
 #include "Camera.h"
 #include "Course.h"
 #include "Scene.h"
+#include "Windmill.h"
 
 static void onResize(GLFWwindow*, int width, int height) {
     glViewport(0, 0, width, height);
@@ -19,6 +20,7 @@ enum GameState { AIMING, ROLLING, IN_HOLE };
 
 Camera camera;
 Ball ball;
+Windmill windmill;
 std::vector<Wall> walls;
 const float PHYSICS_STEP = 1.0f / 240.0f;
 const float MAX_SHOT_SPEED = 9.0f;
@@ -35,6 +37,7 @@ float messageTimer = 0.0f;
 
 bool lampOn = true;
 bool night = false;
+float savedSpeed = 0.0f;      // windmill speed before pausing
 bool rightMouseDown = false;
 double lastMouseX = 0, lastMouseY = 0;
 
@@ -85,6 +88,18 @@ static void onKey(GLFWwindow* window, int key, int, int action, int) {
         powerDirection = 1.0f;
     }
     if (key == GLFW_KEY_R) resetBall();
+    if (key == GLFW_KEY_P) {  // pause / resume the windmill
+        if (windmill.speed != 0.0f) {
+            savedSpeed = windmill.speed;
+            windmill.speed = 0.0f;
+        } else {
+            windmill.speed = savedSpeed;
+        }
+    }
+    if ((key == GLFW_KEY_EQUAL || key == GLFW_KEY_KP_ADD) && windmill.speed < 5.0f && windmill.speed != 0.0f)
+        windmill.speed += 0.25f;
+    if ((key == GLFW_KEY_MINUS || key == GLFW_KEY_KP_SUBTRACT) && windmill.speed > 0.25f)
+        windmill.speed -= 0.25f;
 }
 
 static void onMouseButton(GLFWwindow*, int button, int action, int) {
@@ -194,6 +209,7 @@ int main() {
     walls.push_back({COURSE_MAX_X, COURSE_MIN_Z, COURSE_MAX_X + t, COURSE_MAX_Z});          // right
     walls.push_back({COURSE_MIN_X - t, COURSE_MIN_Z - t, COURSE_MAX_X + t, COURSE_MIN_Z});  // far
     walls.push_back({COURSE_MIN_X - t, COURSE_MAX_Z, COURSE_MAX_X + t, COURSE_MAX_Z + t});  // near
+    windmill.position = WINDMILL_POSITION;
     resetBall();
 
     float lastTime = (float)glfwGetTime();
@@ -218,6 +234,7 @@ int main() {
 
         if (dt > 0.1f) dt = 0.1f;  // e.g. when the window is dragged
         processInput(window, dt);
+        windmill.update(dt);
         updatePhysics(dt);
         if (messageTimer > 0.0f) messageTimer -= dt;
         camera.target = glm::vec3(ball.position.x, 0.1f, ball.position.z);
@@ -241,7 +258,7 @@ int main() {
         state.aimAngle = aimAngle;
         state.power = power;
         state.time = now;
-        scene.draw(camera, (float)width / height, ball.position, state);
+        scene.draw(camera, (float)width / height, ball.position, windmill, state);
 
         glfwSwapBuffers(window);
         glfwPollEvents();

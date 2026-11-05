@@ -2,6 +2,7 @@
 #include "Camera.h"
 #include "Mesh.h"
 #include "Shader.h"
+#include "Windmill.h"
 #include <glm/glm.hpp>
 
 struct SceneState {
@@ -17,7 +18,7 @@ struct SceneState {
 class Scene {
 public:
     void init();
-    void draw(const Camera& camera, float aspect, glm::vec3 ballPosition, const SceneState& state);
+    void draw(const Camera& camera, float aspect, glm::vec3 ballPosition, const Windmill& windmill, const SceneState& state);
 
 private:
     // glow = no lighting, used for light bulbs
@@ -25,6 +26,7 @@ private:
     void drawCourse();
     void drawLamps(const SceneState& state);
     void drawFlag(const SceneState& state);
+    void drawWindmill(const Windmill& windmill);
     void drawBall(glm::vec3 position);
     void drawAimLine(glm::vec3 ballPosition, const SceneState& state);
 
@@ -32,5 +34,6 @@ private:
     Mesh cube, sphere, cylinder, cone, disc;
     Mesh grassPlane, groundPlane;
     Mesh longWall, shortWall;
-    unsigned int grassTexture = 0, woodTexture = 0;
+    Mesh baseSide, baseTop;
+    unsigned int grassTexture = 0, woodTexture = 0, brickTexture = 0;
 };
