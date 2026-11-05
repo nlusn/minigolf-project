@@ -1,6 +1,8 @@
 #pragma once
+#include "Ball.h"
 #include "Course.h"
 #include <glm/glm.hpp>
+#include <vector>
 
 // sizes relative to the windmill position, it faces +z (towards the tee)
 const float BASE_HALF_WIDTH = 1.5f;
@@ -20,4 +22,9 @@ public:
     float speed = 1.0f;   // radians per second
 
     void update(float dt);
+    // solid parts of the base, left and right of the tunnel
+    std::vector<Wall> getWalls() const;
+    // bounces the ball back if a blade is in the way, returns true on a hit
+    bool checkBladeHit(Ball& ball) const;
+    bool isInTunnel(const Ball& ball) const;
 };

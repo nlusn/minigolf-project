@@ -31,6 +31,7 @@ float aimAngle = 0.0f;        // 0 = towards -z (towards the cup)
 float power = 0.0f;           // 0..1
 bool charging = false;        // space is held
 float powerDirection = 1.0f;  // power bar goes up and down
+bool passedTunnel = false;    // went through the windmill this shot
 
 std::string message;          // shown in the title for now, on screen later
 float messageTimer = 0.0f;
@@ -48,7 +49,10 @@ static void showMessage(const std::string& text, float seconds) {
 }
 
 static std::string getResultName() {
-    if (strokes == 1) return "HOLE IN ONE!";
+    if (strokes == 1) {
+        if (passedTunnel) return "HOLE IN ONE THROUGH THE WINDMILL!";
+        return "HOLE IN ONE!";
+    }
     int difference = strokes - PAR;
     if (difference == -1) return "BIRDIE!";
     if (difference == 0) return "PAR";
@@ -73,6 +77,7 @@ static void shoot() {
     glm::vec3 direction(-sin(aimAngle), 0.0f, -cos(aimAngle));
     ball.velocity = direction * (0.5f + power * (MAX_SHOT_SPEED - 0.5f));
     strokes++;
+    passedTunnel = false;
     gameState = ROLLING;
 }
 
@@ -125,6 +130,12 @@ static void updatePhysics(float dt) {
         timeLeft -= PHYSICS_STEP;
         if (gameState == IN_HOLE) continue;
         ball.update(PHYSICS_STEP, walls);
+        if (windmill.checkBladeHit(ball) && gameState == ROLLING)
+            showMessage("BLOCKED BY THE WINDMILL!", 1.2f);
+        if (windmill.isInTunnel(ball)) passedTunnel = true;
+
+        // a resting ball pushed by a blade starts rolling again
+        if (gameState == AIMING && ball.isMoving()) gameState = ROLLING;
         if (gameState != ROLLING) continue;
 
         // in the hole: close to the cup centre and not too fast
@@ -210,6 +221,7 @@ int main() {
     walls.push_back({COURSE_MIN_X - t, COURSE_MIN_Z - t, COURSE_MAX_X + t, COURSE_MIN_Z});  // far
     walls.push_back({COURSE_MIN_X - t, COURSE_MAX_Z, COURSE_MAX_X + t, COURSE_MAX_Z + t});  // near
     windmill.position = WINDMILL_POSITION;
+    for (const Wall& w : windmill.getWalls()) walls.push_back(w);
     resetBall();
 
     float lastTime = (float)glfwGetTime();
