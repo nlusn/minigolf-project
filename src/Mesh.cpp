@@ -27,6 +27,14 @@ void Mesh::create(const std::vector<float>& vertices, const std::vector<unsigned
     indexCount = (int)indices.size();
 }
 
+void Mesh::destroy() {
+    glDeleteBuffers(1, &vbo);
+    glDeleteBuffers(1, &ebo);
+    glDeleteVertexArrays(1, &vao);
+    vao = vbo = ebo = 0;
+    indexCount = 0;
+}
+
 void Mesh::draw() const {
     glBindVertexArray(vao);
     glDrawElements(GL_TRIANGLES, indexCount, GL_UNSIGNED_INT, 0);

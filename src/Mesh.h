@@ -10,6 +10,7 @@ public:
 
     void create(const std::vector<float>& vertices, const std::vector<unsigned int>& indices);
     void draw() const;
+    void destroy();
 };
 
 Mesh makeBox(float width, float height, float depth, float tile = 1.0f);

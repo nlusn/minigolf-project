@@ -16,14 +16,8 @@ void Scene::init() {
     cone = makeCylinder(1.0f, 0.0f, 20);
     disc = makeDisc(1.0f, 24);
 
-    float length = COURSE_MAX_Z - COURSE_MIN_Z;
-    float width = COURSE_MAX_X - COURSE_MIN_X;
     // last number = texture tile size, so textures repeat instead of stretching
-    grassPlane = makePlane(width, length, 1.0f);
     groundPlane = makePlane(80.0f, 80.0f, 2.5f);
-    // walls go from y = -0.2 (ground) up to WALL_HEIGHT
-    longWall = makeBox(WALL_THICKNESS, WALL_HEIGHT + 0.2f, length, 0.6f);
-    shortWall = makeBox(width + 2 * WALL_THICKNESS, WALL_HEIGHT + 0.2f, WALL_THICKNESS, 0.6f);
 
     grassTexture = makeGrassTexture();
     woodTexture = makeWoodTexture();
@@ -34,6 +28,24 @@ void Scene::init() {
 
     glEnable(GL_DEPTH_TEST);
     glEnable(GL_CULL_FACE);
+}
+
+void Scene::loadLevel(const Level& level) {
+    for (PlacedMesh& p : floorPieces) p.mesh.destroy();
+    for (PlacedMesh& p : wallPieces) p.mesh.destroy();
+    floorPieces.clear();
+    wallPieces.clear();
+
+    for (const Wall& f : level.floors) {
+        float w = f.maxX - f.minX, d = f.maxZ - f.minZ;
+        floorPieces.push_back({makePlane(w, d, 1.0f), vec3(f.minX + w / 2, 0.0f, f.minZ + d / 2)});
+    }
+    // walls go from y = -0.2 (ground) up to WALL_HEIGHT
+    float wallH = WALL_HEIGHT + 0.2f;
+    for (const Wall& wl : level.walls) {
+        float w = wl.maxX - wl.minX, d = wl.maxZ - wl.minZ;
+        wallPieces.push_back({makeBox(w, wallH, d, 0.6f), vec3(wl.minX + w / 2, WALL_HEIGHT - wallH / 2, wl.minZ + d / 2)});
+    }
 }
 
 void Scene::drawObject(const Mesh& mesh, const mat4& model, vec3 color, unsigned int texture, bool glow) {
@@ -50,7 +62,8 @@ void Scene::drawObject(const Mesh& mesh, const mat4& model, vec3 color, unsigned
     mesh.draw();
 }
 
-void Scene::draw(const Camera& camera, float aspect, vec3 ballPosition, const Windmill& windmill, const SceneState& state) {
+void Scene::draw(const Camera& camera, float aspect, const Level& level, vec3 ballPosition,
+                 const Windmill& windmill, const SceneState& state) {
     shader.use();
     shader.setMat4("uView", camera.getViewMatrix());
     shader.setMat4("uProjection", camera.getProjectionMatrix(aspect));
@@ -69,35 +82,29 @@ void Scene::draw(const Camera& camera, float aspect, vec3 ballPosition, const Wi
 
     // lamp post and the moving lantern
     float lampStrength = state.lampOn ? (state.night ? 1.5f : 0.6f) : 0.0f;
-    shader.setVec3("uLampPosition", LAMP_POSITION + vec3(0, 1.7f, 0));
+    shader.setVec3("uLampPosition", level.lampPosition + vec3(0, 1.7f, 0));
     shader.setVec3("uLampColor", vec3(1.0f, 0.75f, 0.4f) * lampStrength);
     shader.setVec3("uLanternPosition", state.lanternPosition);
     shader.setVec3("uLanternColor", vec3(0.4f, 0.7f, 1.0f) * lampStrength);
 
-    drawCourse();
-    drawWindmill(windmill);
-    drawFlag(state);
-    drawLamps(state);
+    drawCourse(level);
+    if (level.hasWindmill) drawWindmill(windmill);
+    drawFlag(level, state);
+    drawLamps(level, state);
     drawBall(ballPosition);
     if (state.showAim) drawAimLine(ballPosition, state);
 }
 
-void Scene::drawCourse() {
-    float centerX = (COURSE_MIN_X + COURSE_MAX_X) / 2;
-    float centerZ = (COURSE_MIN_Z + COURSE_MAX_Z) / 2;
-    float wallY = (WALL_HEIGHT - 0.2f) / 2;
-    float t = WALL_THICKNESS / 2;
+void Scene::drawCourse(const Level& level) {
+    drawObject(groundPlane, glm::translate(mat4(1.0f), vec3(level.center.x, -0.2f, level.center.z)), vec3(0.55f, 0.6f, 0.4f), grassTexture);
 
-    drawObject(groundPlane, glm::translate(mat4(1.0f), vec3(0, -0.2f, centerZ)), vec3(0.55f, 0.6f, 0.4f), grassTexture);
-    drawObject(grassPlane, glm::translate(mat4(1.0f), vec3(centerX, 0, centerZ)), vec3(1.0f), grassTexture);
-
-    drawObject(longWall, glm::translate(mat4(1.0f), vec3(COURSE_MIN_X - t, wallY, centerZ)), vec3(1.0f), woodTexture);
-    drawObject(longWall, glm::translate(mat4(1.0f), vec3(COURSE_MAX_X + t, wallY, centerZ)), vec3(1.0f), woodTexture);
-    drawObject(shortWall, glm::translate(mat4(1.0f), vec3(centerX, wallY, COURSE_MIN_Z - t)), vec3(1.0f), woodTexture);
-    drawObject(shortWall, glm::translate(mat4(1.0f), vec3(centerX, wallY, COURSE_MAX_Z + t)), vec3(1.0f), woodTexture);
+    for (const PlacedMesh& p : floorPieces)
+        drawObject(p.mesh, glm::translate(mat4(1.0f), p.position), vec3(1.0f), grassTexture);
+    for (const PlacedMesh& p : wallPieces)
+        drawObject(p.mesh, glm::translate(mat4(1.0f), p.position), vec3(1.0f), woodTexture);
 
     // cup is a dark disc just above the grass
-    mat4 cup = glm::translate(mat4(1.0f), vec3(CUP_POSITION.x, 0.002f, CUP_POSITION.y));
+    mat4 cup = glm::translate(mat4(1.0f), vec3(level.cup.x, 0.002f, level.cup.y));
     drawObject(disc, glm::scale(cup, vec3(CUP_RADIUS, 1, CUP_RADIUS)), vec3(0.03f));
 }
 
@@ -136,9 +143,9 @@ void Scene::drawWindmill(const Windmill& windmill) {
     }
 }
 
-void Scene::drawFlag(const SceneState& state) {
+void Scene::drawFlag(const Level& level, const SceneState& state) {
     // the flag is a child of the pole: its matrix starts from the pole's matrix
-    mat4 poleMatrix = glm::translate(mat4(1.0f), vec3(CUP_POSITION.x, 0, CUP_POSITION.y));
+    mat4 poleMatrix = glm::translate(mat4(1.0f), vec3(level.cup.x, 0, level.cup.y));
     drawObject(cylinder, glm::scale(poleMatrix, vec3(0.015f, 1.3f, 0.015f)), vec3(0.95f));
 
     mat4 flagMatrix = glm::translate(poleMatrix, vec3(0, 1.18f, 0));
@@ -147,12 +154,12 @@ void Scene::drawFlag(const SceneState& state) {
     drawObject(cube, glm::scale(flag, vec3(0.4f, 0.24f, 0.01f)), vec3(0.9f, 0.1f, 0.1f));
 }
 
-void Scene::drawLamps(const SceneState& state) {
-    mat4 pole = glm::translate(mat4(1.0f), LAMP_POSITION + vec3(0, -0.2f, 0));
+void Scene::drawLamps(const Level& level, const SceneState& state) {
+    mat4 pole = glm::translate(mat4(1.0f), level.lampPosition + vec3(0, -0.2f, 0));
     drawObject(cylinder, glm::scale(pole, vec3(0.05f, 1.8f, 0.05f)), vec3(0.15f));
 
     vec3 bulbColor = state.lampOn ? vec3(1.0f, 0.85f, 0.5f) : vec3(0.3f);
-    mat4 bulb = glm::translate(mat4(1.0f), LAMP_POSITION + vec3(0, 1.7f, 0));
+    mat4 bulb = glm::translate(mat4(1.0f), level.lampPosition + vec3(0, 1.7f, 0));
     drawObject(sphere, glm::scale(bulb, vec3(0.12f)), bulbColor, 0, state.lampOn);
 
     vec3 lanternColor = state.lampOn ? vec3(0.5f, 0.8f, 1.0f) : vec3(0.3f);

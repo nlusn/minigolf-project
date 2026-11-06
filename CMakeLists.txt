@@ -40,6 +40,7 @@ add_executable(minigolf
   src/Texture.cpp
   src/Ball.cpp
   src/Windmill.cpp
+  src/Course.cpp
 )
 target_include_directories(minigolf PRIVATE include src)
 target_link_libraries(minigolf PRIVATE glad glfw glm::glm OpenGL::GL)

@@ -1,21 +1,31 @@
 #pragma once
 #include <glm/glm.hpp>
+#include <string>
+#include <vector>
 
-// course goes along z: tee at z = +1.8, cup at z = -7, grass at y = 0
-const float COURSE_MIN_X = -1.5f, COURSE_MAX_X = 1.5f;
-const float COURSE_MIN_Z = -9.0f, COURSE_MAX_Z = 3.0f;
+// y is up, grass at y = 0, positions on the ground are (x, z)
 const float WALL_THICKNESS = 0.2f;
 const float WALL_HEIGHT = 0.25f;
-
-const glm::vec2 TEE_POSITION(0.0f, 1.8f);   // (x, z)
-const glm::vec2 CUP_POSITION(0.0f, -7.0f);
 const float CUP_RADIUS = 0.17f;
 const float BALL_RADIUS = 0.1f;
-const int PAR = 2;
 
-const glm::vec3 LAMP_POSITION(2.3f, 0.0f, -7.5f);
-const glm::vec3 WINDMILL_POSITION(0.0f, 0.0f, -3.0f);
-
+// rectangle seen from above, used for walls and grass areas
 struct Wall {
     float minX, minZ, maxX, maxZ;
 };
+
+struct Level {
+    std::string name;
+    int par = 2;
+    glm::vec2 tee;
+    glm::vec2 cup;
+    std::vector<Wall> floors;
+    std::vector<Wall> walls;
+    bool hasWindmill = false;
+    glm::vec3 windmillPosition = glm::vec3(0.0f);
+    float windmillSpeed = 1.0f;
+    glm::vec3 lampPosition;
+    glm::vec3 center;   // the lantern flies around it
+};
+
+std::vector<Level> createLevels();
