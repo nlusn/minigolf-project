@@ -251,6 +251,34 @@ static void drawHud(int width, int height) {
         for (int i = 0; i < count; i++)
             hud.text(16, y + i * 10.0f * 1.5f, 1.5f, lines[i], white);
     }
+
+    // win screen with the scorecard
+    if (gameState == WON) {
+        hud.rect(0, 0, (float)width, (float)height, glm::vec4(0, 0, 0, 0.4f));
+        float cx = width / 2.0f, cy = height / 2.0f;
+        hud.rect(cx - 280, cy - 170, 560, 340, glm::vec4(0.05f, 0.15f, 0.08f, 0.9f));
+        hud.textCentered(cx, cy - 150, s * 2, "YOU WIN!", yellow);
+
+        float col1 = cx - 240, col2 = cx + 60, col3 = cx + 160;
+        float y = cy - 85;
+        hud.text(col1, y, s, "HOLE", yellow);
+        hud.text(col2, y, s, "PAR", yellow);
+        hud.text(col3, y, s, "SCORE", yellow);
+        int totalPar = 0, totalScore = 0;
+        for (int i = 0; i < 3; i++) {
+            y += 12 * s;
+            hud.text(col1, y, s, std::to_string(i + 1) + " " + levels[i].name, white);
+            hud.text(col2, y, s, std::to_string(levels[i].par), white);
+            hud.text(col3, y, s, std::to_string(scores[i]), white);
+            totalPar += levels[i].par;
+            totalScore += scores[i];
+        }
+        y += 16 * s;
+        hud.text(col1, y, s, "TOTAL", yellow);
+        hud.text(col2, y, s, std::to_string(totalPar), yellow);
+        hud.text(col3, y, s, std::to_string(totalScore), yellow);
+        hud.textCentered(cx, cy + 130, s, "PRESS R TO PLAY AGAIN", yellow);
+    }
     hud.end();
 }
 
@@ -324,8 +352,6 @@ int main() {
                     loadLevel(currentLevel + 1);
                 } else {
                     gameState = WON;
-                    int total = scores[0] + scores[1] + scores[2];
-                    showMessage("COURSE COMPLETE! TOTAL " + std::to_string(total) + " - PRESS R TO PLAY AGAIN", 1000.0f);
                 }
             }
         }
