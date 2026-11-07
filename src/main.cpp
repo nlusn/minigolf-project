@@ -9,6 +9,7 @@
 #include "Ball.h"
 #include "Camera.h"
 #include "Course.h"
+#include "Hud.h"
 #include "Scene.h"
 #include "Windmill.h"
 
@@ -20,6 +21,7 @@ enum GameState { AIMING, ROLLING, IN_HOLE, WON };
 
 Camera camera;
 Scene scene;
+Hud hud;
 Ball ball;
 Windmill windmill;
 std::vector<Wall> walls;        // walls of the current hole + windmill base
@@ -39,11 +41,13 @@ bool charging = false;        // space is held
 float powerDirection = 1.0f;  // power bar goes up and down
 bool passedTunnel = false;    // went through the windmill this shot
 
-std::string message;          // shown in the title for now, on screen later
+std::string message;          // big text in the middle of the screen
 float messageTimer = 0.0f;
 
 bool lampOn = true;
 bool night = false;
+bool showHelp = true;
+float fps = 0.0f;
 float savedSpeed = 0.0f;      // windmill speed before pausing
 bool rightMouseDown = false;
 double lastMouseX = 0, lastMouseY = 0;
@@ -51,7 +55,6 @@ double lastMouseX = 0, lastMouseY = 0;
 static void showMessage(const std::string& text, float seconds) {
     message = text;
     messageTimer = seconds;
-    std::cout << text << std::endl;
 }
 
 static std::string getResultName() {
@@ -110,6 +113,7 @@ static void onKey(GLFWwindow* window, int key, int, int action, int) {
     if (key == GLFW_KEY_ESCAPE) glfwSetWindowShouldClose(window, 1);
     if (key == GLFW_KEY_L) lampOn = !lampOn;
     if (key == GLFW_KEY_N) night = !night;
+    if (key == GLFW_KEY_H) showHelp = !showHelp;
     if (key == GLFW_KEY_SPACE && gameState == AIMING) {
         charging = true;
         power = 0.0f;
@@ -208,6 +212,48 @@ static void processInput(GLFWwindow* window, float dt) {
     }
 }
 
+static void drawHud(int width, int height) {
+    hud.begin(width, height);
+    float s = (height >= 1000) ? 3.0f : 2.0f;   // font pixel size
+    glm::vec4 white(1, 1, 1, 1), yellow(1, 0.85f, 0.3f, 1), panel(0, 0, 0, 0.5f);
+
+    const Level& level = levels[currentLevel];
+    hud.rect(10, 10, 52 * 6 * s / 2 + 10, 22 * s, panel);
+    hud.text(16, 14, s, "HOLE " + std::to_string(currentLevel + 1) + "/3  " + level.name, yellow);
+    hud.text(16, 14 + 10 * s, s, "PAR " + std::to_string(level.par) + "   STROKES " + std::to_string(strokes), white);
+    std::string fpsText = "FPS " + std::to_string((int)fps);
+    hud.text(width - hud.textWidth(fpsText, s) - 16, 14, s, fpsText, glm::vec4(0.5f, 1, 0.5f, 1));
+
+    if (gameState == AIMING) {
+        float barW = 300, barH = 20, x = (width - barW) / 2, y = height - 50.0f;
+        hud.rect(x - 3, y - 3, barW + 6, barH + 6, panel);
+        hud.rect(x, y, barW * power, barH, glm::vec4(power, 1.0f - power, 0.1f, 1));
+        hud.textCentered(width / 2.0f, y - 10 * s, s, charging ? "RELEASE SPACE TO SHOOT" : "HOLD SPACE FOR POWER", white);
+    }
+
+    if (messageTimer > 0.0f) {
+        float big = s * 2;
+        float w = hud.textWidth(message, big);
+        hud.rect((width - w) / 2 - 10, height * 0.25f - 10, w + 20, 7 * big + 20, panel);
+        hud.textCentered(width / 2.0f, height * 0.25f, big, message, yellow);
+    }
+
+    if (showHelp) {
+        const char* lines[] = {
+            "LEFT/RIGHT  AIM",       "SPACE       HOLD = POWER", "RIGHT MOUSE ORBIT CAMERA",
+            "A/D UP/DOWN ORBIT",     "WHEEL, W/S  ZOOM",         "L  LAMPS ON/OFF",
+            "N  DAY/NIGHT",          "P  PAUSE WINDMILL",        "+/- WINDMILL SPEED",
+            "1 2 3  SELECT HOLE",    "R  RESTART",               "H  HIDE HELP",
+        };
+        int count = sizeof(lines) / sizeof(lines[0]);
+        float y = height - count * 10.0f * 1.5f - 16;
+        hud.rect(10, y - 6, 26 * 6 * 1.5f + 12, count * 10.0f * 1.5f + 10, panel);
+        for (int i = 0; i < count; i++)
+            hud.text(16, y + i * 10.0f * 1.5f, 1.5f, lines[i], white);
+    }
+    hud.end();
+}
+
 int main() {
     if (!glfwInit()) {
         std::cerr << "Failed to initialise GLFW\n";
@@ -242,6 +288,7 @@ int main() {
     glViewport(0, 0, w, h);
 
     scene.init();
+    hud.init();
 
     levels = createLevels();
     resetGame();
@@ -258,9 +305,8 @@ int main() {
         frames++;
         fpsTimer += dt;
         if (fpsTimer >= 0.5f) {
-            int fps = (int)(frames / fpsTimer);
-            std::string title = "Mini Golf - FPS " + std::to_string(fps) + " - Strokes " + std::to_string(strokes);
-            if (messageTimer > 0.0f) title += " - " + message;
+            fps = frames / fpsTimer;
+            std::string title = "Mini Golf - FPS " + std::to_string((int)fps) + " - Strokes " + std::to_string(strokes);
             glfwSetWindowTitle(window, title.c_str());
             frames = 0;
             fpsTimer = 0.0f;
@@ -306,6 +352,7 @@ int main() {
         state.power = power;
         state.time = now;
         scene.draw(camera, (float)width / height, levels[currentLevel], ball.position, windmill, state);
+        drawHud(width, height);
 
         glfwSwapBuffers(window);
         glfwPollEvents();
