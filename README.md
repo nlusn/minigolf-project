@@ -20,9 +20,6 @@ cmake -S . -B build
 cmake --build build --config Release
 build\Release\minigolf.exe
 ```
-
-Run the program from the project folder or the folder that contains the executable. It loads the shaders from `shaders/`, which CMake copies next to the executable.
-
 ## Controls
 
 | Key | Action |
@@ -63,7 +60,7 @@ Run the program from the project folder or the folder that contains the executab
 |---|---|
 | R1 | OpenGL 3.3 core, VAO/VBO/EBO for the meshes, our shaders in `shaders/` |
 | R2 | Objects: green, field, walls, windmill (base, tower, roof, hub, 4 blades), ball, cup, flag, lamp post, lantern |
-| R3 | Model, view and projection matrices with GLM. Hierarchies: windmill → rotor → blades → spar and sail, and pole → flag (`Scene.cpp`) |
+| R3 | Model, view and projection matrices with GLM. Hierarchies: windmill blades flag (`Scene.cpp`) |
 | R4 | Blinn-Phong per fragment (`basic.frag`): ambient, diffuse and specular. 3 lights: the sun, the lamp post and a lantern that flies around the course. L turns the lamp and lantern off |
 | R5 | Grass, wood and brick textures made in code, with mipmaps and repeating UVs (`Texture.cpp`) |
 | R6 | Orbit camera with mouse and keyboard. Interactions: aim and shoot, lights on/off, day/night, windmill pause/speed, hole select, restart |

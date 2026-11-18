@@ -5,7 +5,7 @@
 | Library | Used for | Author | Link | License |
 |---|---|---|---|---|
 | GLFW | Window and input | Marcus Geelnard, Camilla Löwy | https://www.glfw.org | zlib/libpng |
-| GLM | Vectors and matrices | G-Truc Creation | https://github.com/g-truc/glm | MIT (Happy Bunny) |
+| GLM | Vectors and matrices | G-Truc Creation | https://github.com/g-truc/glm | MIT|
 | GLAD 2 | Loading OpenGL functions (files in `external/glad`) | David Herberth | https://github.com/Dav1dde/glad | Generator: MIT. Generated files: public domain / CC0, Khronos headers: Apache 2.0 / MIT |
 
 ## Assets
